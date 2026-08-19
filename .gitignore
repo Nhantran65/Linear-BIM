@@ -11,8 +11,8 @@ node_modules/
 .env.*
 
 # Excluded research inputs and weights
-data/
-archive/
+/data/
+/archive/
 *.pt
 *.pth
 *.ckpt
