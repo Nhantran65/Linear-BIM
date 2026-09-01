@@ -1,0 +1,27 @@
+name: s3
+dataset: isruc-s3
+variant: linear_bim
+input_dim: 320
+modalities: 10
+classes: 5
+dense_width: 64
+protocol: matched-cvan-s3
+scope: matched-isruc-s3 / held-out-selected / leaky
+frozen_outputs: artifacts/frozen/s3/frozen_outputs.npz
+required_inputs:
+  - data/s3/cache/isruc_s3_source/manifest.json
+training:
+  allowed_stages: [head]
+  backbone_optimizer:
+    name: Adam
+    lr: 0.001
+    eps: 1.0e-7
+    amsgrad: true
+    scheduler: cosine_decay_restarts
+    first_decay_steps: 10
+  head_optimizer:
+    name: Adam
+    lr: 0.001
+    eps: 1.0e-8
+    amsgrad: false
+seed: 32

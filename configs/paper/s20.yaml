@@ -1,0 +1,28 @@
+name: s20
+dataset: sleep-edf-20
+variant: linear_bim
+input_dim: 128
+modalities: 4
+classes: 5
+dense_width: 64
+protocol: author-compatible-s20
+scope: author-literal-tenfold / held-out-selected / leaky
+frozen_outputs: artifacts/frozen/s20/frozen_outputs.npz
+required_inputs:
+  - data/s20/cache-author-literal/manifest.json
+  - data/official/ULW_weight.zip
+training:
+  allowed_stages: [head]
+  backbone_optimizer:
+    name: Adam
+    lr: 0.001
+    eps: 1.0e-7
+    amsgrad: true
+    scheduler: cosine_decay_restarts
+    first_decay_steps: 10
+  head_optimizer:
+    name: Adam
+    lr: 0.001
+    eps: 1.0e-8
+    amsgrad: false
+seed: 32
