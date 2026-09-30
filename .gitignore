@@ -27,9 +27,6 @@ node_modules/
 *.mat
 *.npy
 *.npz
-!artifacts/frozen/s20/frozen_outputs.npz
-!artifacts/frozen/s78/frozen_outputs.npz
-!artifacts/frozen/s3/frozen_outputs.npz
 *.zip
 *.tar
 *.gz
@@ -46,3 +43,9 @@ VALIDATION.json
 audit.json
 *audit*.json
 *.log
+/results/
+
+# Compact review branch: local frozen evidence and supplied manuscript
+/artifacts/
+/paper/
+/Linear_BIM_Paper.pdf

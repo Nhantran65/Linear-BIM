@@ -1,112 +1,60 @@
-# Linear-BIM and BIM-Explain
+# Linear-BIM: source code and compact numerical review evidence
 
-Lightweight bidirectional temporal correction for a frozen ULW-SleepNet
-backbone, with exact additive explanations of the correction.
+This repository contains an implementation of Linear-BIM, a bidirectional temporal residual head over a frozen ULW-SleepNet backbone, and BIM-Explain for exact decomposition of that residual. It accompanies **`Linear_BIM_Paper.pdf` supplied on 2026-09-30** (`Linear-BIM: Bidirectional Innovation Memory with Exact Attribution for Sleep Stage Scoring`; PDF SHA-256 and source hashes are recorded in `review_evidence/paper_v1.json`). The PDF is a local input to this audit, not part of the small Git review package. The complete manuscript source is unavailable here; the checked-in historical Table I TeX refers to a different, official-checkpoint comparison. See [the item-by-item audit](review_evidence/README.md).
 
-This repository contains the current Python implementation, focused tests,
-primary prediction results, and selected paper tables and figures. It does not
-contain model weights, EEG recordings, embedding caches, or historical
-experimental packages.
+## Check the paper numbers from a clean clone
 
-## Code
+Python 3.10+ and NumPy are sufficient for the compact checker:
 
-| Component | Location |
-|---|---|
-| ULW backbone definitions | `src/linear_bim/models/backbone.py` |
-| Linear-BIM and current-only head | `src/linear_bim/models/bim.py` |
-| Recording-wise sequence padding | `src/linear_bim/data/` |
-| Frozen-backbone head training | `src/linear_bim/training/head.py` |
-| Prediction evaluation | `src/linear_bim/evaluation/` |
-| Coordinate and exact-history explanations | `src/linear_bim/explain/` |
-| Command-line entry point | `src/linear_bim/cli.py` |
-| Dataset configurations | `configs/paper/` |
-
-## Installation and evaluation
-
-Run from the repository root:
-
-```bash
+```sh
 python3 -m venv .venv
-.venv/bin/python -m pip install -e '.[test]'
-.venv/bin/python -m linear_bim evaluate --config configs/paper/s20.yaml
-.venv/bin/python -m linear_bim evaluate --config configs/paper/s78.yaml
-.venv/bin/python -m linear_bim evaluate --config configs/paper/s3.yaml
+.venv/bin/python -m pip install numpy
+.venv/bin/python scripts/check_review_evidence.py
+```
+
+This checks the three dataset confusion matrices, matched gains, fold directions, Table II intervention metrics, subject bootstrap confidence intervals and Figure 2 margin arithmetic. If the original ignored source files are present, use `--check-sources` to verify their SHA-256 as well. The JSON contains the source paths and hashes. This is a **numerical review check**, not a rerun of signal preprocessing, checkpoint training or model evaluation. It does not independently recover event-level pooled history medians or FLOP measurements. The PDF's Sleep-EDF FLOPs differ from the report's operation ledger; the exact comparison is in the audit.
+
+## Layout
+
+| Path | Role in a clean clone |
+|---|---|
+| `src/linear_bim/` | Supported model, head training, frozen evaluation and attribution primitives |
+| `configs/paper/` | S20, S78 and S3 configuration, including local input paths and protocol labels |
+| `experiments/recipes/` | Protocol mapping and limits of the supported runner |
+| `review_evidence/` | Small derived JSON, source hashes and PDF-to-repo audit |
+| `scripts/check_review_evidence.py` | Independent calculation from the committed bundle |
+| `scripts/export_review_evidence.py` | Local-only deterministic export from frozen sources |
+| `tests/` | Focused package tests |
+| `data/`, `artifacts/frozen/`, `artifacts/runs/`, `checkpoints/`, `results/` | Local inputs and large outputs; absent from the current review tree |
+| `paper/` | Existing paper tables and figure assets retained from prior commits; their source provenance is recorded in the audit |
+
+The original historical runners live in `archive/legacy/` in the full workspace and are **not** part of this Git repository. They are named in the audit for provenance. `MIGRATION_MANIFEST.json` and relocation metadata document the workspace reorganization but are not needed for the clean-clone check.
+
+## Environment and data provenance
+
+The package declares Python >=3.10, NumPy, scikit-learn, PyTorch and PyYAML in `pyproject.toml`; optional `data`, `plot` and `test` extras add their respective libraries. These declarations are **not a pinned CUDA/environment lockfile**. The frozen source reports record Python 3.12.3, NumPy 2.4.4 and PyTorch 2.12.1+cu130 for S20; other report environments may differ. Install the package and tests with `.venv/bin/python -m pip install -e '.[test]'` when network access is available.
+
+The experiments used Sleep-EDF-20 (32,843 30-second epochs), Sleep-EDF-78 (195,099) and ISRUC-S3 (8,589). Sleep-EDF processing follows the author-compatible recording-wise tenfold protocol, **with subject overlap and held-out checkpoint selection**. S3 uses ten subject-disjoint folds but also held-out selection. The parent is a **self-trained** ULW-SleepNet per dataset, frozen before BIM head training. The Sleep-EDF parent has 13,337 parameters; BIM adds 3,112. S3 has 25,625 parent parameters and adds 6,184. The historical S3 cVAN source manifest identifies upstream commit `b0fa1e2d6b97d2dec1457b7572441cd01e25a333`; these are not cVAN performance results. Dataset release identifiers, redistribution rights and a fully pinned preprocessing environment are **not established** by the committed files. Consult the original dataset providers and the local cache manifests before a full replay.
+
+## What can actually be run
+
+From a clean clone, run the numerical check above and the focused code tests after installing `.[test]`:
+
+```sh
 .venv/bin/python -m pytest -q tests
 ```
 
-The bundled prediction-only NPZ files support metric recomputation without
-weights or raw EEG. Configuration paths for training inputs are intentionally
-not populated by this release; `doctor` reports missing training prerequisites.
-Optional dependencies for data processing and plotting are available as
-`.[data,plot]`. CUDA/Triton compatibility must be checked in the target environment.
+With the **original frozen outputs** supplied at paths in `configs/paper/*.yaml`, these supported read-only commands run:
 
-## Primary results
-
-| Dataset | Epochs | Linear-BIM ACC (%) | Macro-F1 (%) |
-|---|---:|---:|---:|
-| Sleep-EDF-20 | 32,843 | 88.00 | 82.59 |
-| Sleep-EDF-78 | 195,099 | 84.04 | 78.31 |
-| ISRUC-S3 | 8,589 | 83.12 | 81.77 |
-
-These are **author-compatible, held-out-selected results, not independent
-clean-test estimates**. Sleep-EDF-78 also has subject overlap in its historical
-split. ISRUC-S3 uses the GitHub-matched 8,589-epoch setting. The datasets must not
-be interpreted as a controlled, matched-protocol comparison against external
-papers.
-
-- [Detailed primary metrics](results/primary_metrics.csv)
-- [Paper tables](paper/tables/PAPER_TABLES.md)
-- Per-dataset and per-fold metrics: `results/{s20,s78,s3}.json`
-- Prediction arrays: `artifacts/frozen/{s20,s78,s3}/frozen_outputs.npz`
-
-`U0` in the machine-readable results is the locally trained frozen baseline.
-The official/published ULW reference in Paper Table I is a separate reference;
-its values must not be substituted for the local U0 predictions.
-
-## Training and explanation scope
-
-The supported training command trains only the BIM head from supplied
-embeddings and U0 logits:
-
-```bash
-.venv/bin/python -m linear_bim train \
-  --config configs/paper/s20.yaml \
-  --stage head --fold 0 --device cuda:0 --run-id s20-head-example \
-  --train-npz /path/to/train.npz --held-npz /path/to/held.npz
+```sh
+.venv/bin/python -m linear_bim evaluate --config configs/paper/s20.yaml
+.venv/bin/python -m linear_bim audit --config configs/paper/s20.yaml
 ```
 
-Both inputs require `sequence_ids`, `epoch_indices`, `embeddings`, `u0_logits`,
-and `labels`. Sequence IDs identify recordings, not pooled subjects with multiple
-nights. The head uses Adam, constant learning rate 0.001, unweighted cross-entropy,
-gradient clipping at norm 5, and 200 full-recording-batch updates by default.
-The earliest maximum held-out accuracy determines the selected checkpoint.
+The `doctor` command reports missing local inputs in a clean clone and exits 2; it is a diagnostic, not a reproduction step. `evaluate`/`audit` cannot run without the ignored frozen NPZ. Head training is supported only from explicitly supplied train and held-out NPZ files containing `sequence_ids`, `epoch_indices`, `embeddings`, `u0_logits`, and `labels`; a valid invocation is:
 
-Full end-to-end preprocessing/backbone experiment runners and optimizer/RNG
-resume are not implemented in this standalone interface. No full GPU replay is
-claimed for this release. The package exposes both 14-coordinate and 8-group
-local/history explanation primitives; the CLI `explain` adapter currently
-supports coordinate explanations from supplied features and residual weights.
+```sh
+.venv/bin/python -m linear_bim train --config configs/paper/s20.yaml --stage head --run-id local-s20-fold0 --fold 0 --device cpu --allow-cpu --train-npz /path/to/train.npz --held-npz /path/to/held.npz
+```
 
-## Figures
-
-### Architecture
-
-![Linear-BIM architecture](paper/figures/linear-bim-bim-explain-architecture/linear-bim-architecture/linear-bim-bim-explain-architecture.png)
-
-### Exact attribution example
-
-![Exact attribution](paper/figures/fig2-exact-attribution/conference-v4/fig2-exact-attribution.png)
-
-The attribution figure is an illustrative example, not an aggregate performance
-claim. PDF, SVG, and editable draw.io versions accompany the PNG assets.
-
-## Repository history
-
-The initial 20 commits are an **explicitly reconstructed import history**, not
-the original development log. Their author dates are distributed from
-mid-August to September 2026 for organization; they are not evidence that those
-Git commits or final code snapshots existed on those dates. Committer dates
-record the actual import. Every reconstructed commit carries an explanatory
-trailer. Author attribution was authorized by the two collaborators and is
-allocated as 12 commits to Nhan Tran and 8 to Kiet Tran; this allocation is not a
-measurement of their relative development effort.
+It writes to ignored `artifacts/runs/`. This command is conditional on those NPZ inputs and **does not reconstruct the paper pipeline**. Full backbone training, raw data preparation, all tenfold checkpoint selection, external-method reproduction, and paper figure generation from a clean clone are not supported by the compact runner. Recreating the paper requires licensed/source datasets, preprocessing specifications and source files, frozen parent weights or their training pipeline, historical experiment runners, a pinned compute environment, and a reviewed end-to-end protocol with an untouched outer test if generalization is claimed. No automatic download or silent fallback is implemented.
